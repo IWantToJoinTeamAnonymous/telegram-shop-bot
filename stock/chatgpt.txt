@@ -1,0 +1,2 @@
+mail1@gmail.com:password1
+mail2@gmail.com:password2
