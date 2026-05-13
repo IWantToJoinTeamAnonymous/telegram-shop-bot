@@ -98,7 +98,7 @@ function getStock(productKey) {
   const data = fs.readFileSync(file, "utf8")
 
   return data
-    .split("\\n")
+    .split("\n")
     .filter(x => x.trim() !== "")
 }
 
@@ -387,6 +387,15 @@ bot.hears("🆘 Support", (ctx) => {
   ctx.reply("📩 Liên hệ admin: @yourusername")
 })
 
-bot.launch()
+bot.launch({
+  dropPendingUpdates: true
+});
 
 console.log("Bot started")
+process.on("uncaughtException", (err) => {
+  console.log("Uncaught Exception:", err)
+})
+
+process.on("unhandledRejection", (err) => {
+  console.log("Unhandled Rejection:", err)
+})
