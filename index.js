@@ -22,7 +22,7 @@ mongoose.connect(process.env.MONGO_URI)
   console.log("MongoDB connected")
 })
 .catch((err) => {
-  console.log(err)
+  console.log("Mongo Error:", err)
 })
 
 const userSchema = new mongoose.Schema({
@@ -110,12 +110,14 @@ function removeFirstStock(productKey) {
 
   const first = stock.shift()
 
-  fs.writeFileSync(file, stock.join("\\n"))
+  fs.writeFileSync(file, stock.join("\n"))
 
   return first
 }
 
 bot.start(async (ctx) => {
+
+  console.log("START COMMAND:", ctx.from.id)
 
   const telegramId = ctx.from.id
 
@@ -137,6 +139,7 @@ bot.start(async (ctx) => {
 Bot bán acc premium tự động
 
 Chọn chức năng:`,
+
     Markup.keyboard([
       ["🛍 Shop", "📦 Orders"],
       ["👤 Profile", "🆘 Support"]
@@ -240,7 +243,7 @@ Sau khi thanh toán hãy bấm nút bên dưới.`
 `🛒 ORDER MỚI
 
 👤 User:
-@${ctx.from.username}
+@${ctx.from.username || "NoUsername"}
 
 📦 Product:
 ${product.name}
@@ -276,7 +279,7 @@ bot.action(/paid_(.+)/, async (ctx) => {
 ${orderId}
 
 👤 User:
-@${ctx.from.username}
+@${ctx.from.username || "NoUsername"}
 
 /confirm ${orderId}`
   )
@@ -376,7 +379,7 @@ bot.hears("👤 Profile", async (ctx) => {
 ${ctx.from.id}
 
 👤 Username:
-@${ctx.from.username}
+@${ctx.from.username || "NoUsername"}
 
 💰 Balance:
 ${user.balance}đ`
@@ -389,9 +392,10 @@ bot.hears("🆘 Support", (ctx) => {
 
 bot.launch({
   dropPendingUpdates: true
-});
+})
 
 console.log("Bot started")
+
 process.on("uncaughtException", (err) => {
   console.log("Uncaught Exception:", err)
 })
