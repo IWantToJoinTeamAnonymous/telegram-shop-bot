@@ -32,6 +32,16 @@ const userSchema = new mongoose.Schema({
   balance: {
     type: Number,
     default: 0
+  },
+
+  invitedBy: {
+    type: Number,
+    default: null
+  },
+
+  totalEarned: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -117,6 +127,9 @@ function removeFirstStock(productKey) {
 
 bot.start(async (ctx) => {
 
+  const args = ctx.message.text.split(" ")
+  const refId = args[1]
+
   console.log("START COMMAND:", ctx.from.id)
 
   const telegramId = ctx.from.id
@@ -129,7 +142,12 @@ bot.start(async (ctx) => {
 
     user = await User.create({
       telegramId,
-      username: ctx.from.username || "NoUsername"
+      username: ctx.from.username || "NoUsername",
+
+      invitedBy:
+        refId && refId != telegramId
+          ? Number(refId)
+          : null
     })
   }
 
@@ -142,7 +160,8 @@ Chọn chức năng:`,
 
     Markup.keyboard([
       ["🛍 Shop", "📦 Orders"],
-      ["👤 Profile", "🆘 Support"]
+      ["👤 Profile", "👥 Friends"],
+      ["🆘 Support"]
     ]).resize()
   )
 })
@@ -322,6 +341,41 @@ bot.command("confirm", async (ctx) => {
 
   await order.save()
 
+  const buyer = await User.findOne({
+    telegramId: order.telegramId
+  })
+
+  if (buyer && buyer.invitedBy) {
+
+    const inviter = await User.findOne({
+      telegramId: buyer.invitedBy
+    })
+
+    if (inviter) {
+
+      const commission = Math.floor(order.price * 0.1)
+
+      inviter.balance += commission
+      inviter.totalEarned += commission
+
+      await inviter.save()
+
+      bot.telegram.sendMessage(
+        inviter.telegramId,
+
+`🎉 Bạn vừa nhận được hoa hồng
+
+💰 +${commission.toLocaleString()}đ
+
+👤 Người mua:
+@${buyer.username || "NoUsername"}
+
+📦 Đơn hàng:
+${order.product}`
+      )
+    }
+  }
+
   await bot.telegram.sendMessage(
     order.telegramId,
 
@@ -382,7 +436,41 @@ ${ctx.from.id}
 @${ctx.from.username || "NoUsername"}
 
 💰 Balance:
-${user.balance}đ`
+${user.balance.toLocaleString()}đ
+
+💸 Tổng hoa hồng:
+${user.totalEarned.toLocaleString()}đ`
+  )
+})
+
+bot.hears("👥 Friends", async (ctx) => {
+
+  const user = await User.findOne({
+    telegramId: ctx.from.id
+  })
+
+  const invitedUsers = await User.find({
+    invitedBy: ctx.from.id
+  })
+
+  const botInfo = await bot.telegram.getMe()
+
+  const refLink =
+    `https://t.me/${botInfo.username}?start=${ctx.from.id}`
+
+  ctx.reply(
+`👥 HỆ THỐNG GIỚI THIỆU
+
+🔗 Link mời:
+${refLink}
+
+👤 Đã mời:
+${invitedUsers.length} người
+
+💰 Hoa hồng đã nhận:
+${user.totalEarned.toLocaleString()}đ
+
+📌 Khi người được mời mua hàng bạn sẽ nhận hoa hồng tự động.`
   )
 })
 
